@@ -39,6 +39,7 @@ export default function App() {
     outfitColor: "",
   });
   const [recommendations, setRecommendations] = useState(exampleRecommendations);
+  const [designIdeas, setDesignIdeas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [source, setSource] = useState("Example set shown. Generate to personalize.");
@@ -52,22 +53,54 @@ export default function App() {
   };
 
   const buildPrompt = () => {
-    return `You are a nail polish color curator. Based on the client preferences below, return 4 to 6 nail polish recommendations.\n\nPreferences:\n- Skin tone: ${form.skinTone || "Not specified"}\n- Occasion: ${form.occasion || "Not specified"}\n- Mood: ${form.mood || "Not specified"}\n- Season: ${form.season || "Not specified"}\n- Outfit color: ${form.outfitColor || "Not specified"}\n\nRules:\n- Respond ONLY with valid JSON.\n- Return an array of objects.\n- Each object must include: name, hex, vibe, occasion.\n- Hex codes must be 6-digit format (e.g., #F2C1D1).\n- Vibe should be a short phrase describing the feel.\n- Occasion should be a short phrase for when it fits best.\n- Make colors flattering, cohesive, and varied (neutrals + statement).`;
+    return `You are a nail polish color curator and nail artist. Based on the client preferences below, return a JSON object with two keys: \"palette\" and \"designs\".\n\nPreferences:\n- Skin tone: ${form.skinTone || "Not specified"}\n- Occasion: ${form.occasion || "Not specified"}\n- Mood: ${form.mood || "Not specified"}\n- Season: ${form.season || "Not specified"}\n- Outfit color: ${form.outfitColor || "Not specified"}\n\nRules:\n- Respond ONLY with valid JSON.\n- \"palette\" must be an array of exactly 3 objects.\n- Each palette object must include: name, hex, vibe, occasion, design.\n- Hex codes must be 6-digit format (e.g., #F2C1D1).\n- Vibe should be a short phrase describing the feel.\n- Occasion should be a short phrase for when it fits best.\n- Design should describe a specific nail art pattern in 8-14 words.\n- Include concrete details like finish, placement, and motif.\n- Limit the palette: choose exactly 2 core hues total across all recommendations, plus neutrals.\n- Stay within one hue family (e.g., rosy pinks + taupes). Avoid introducing new hues.\n- Keep finishes consistent (e.g., creamy, glossy, glazed) across the set.\n- Make the set cohesive and not too wide-ranging.\n- \"designs\" must be an array of 3 to 5 standalone design ideas with no hex codes.\n- Each design idea should be a short sentence (8-14 words) describing a pattern or special finish.`;
+  };
+
+  const extractJsonBlock = (text) => {
+    const trimmed = text.trim();
+    const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    const source = (fencedMatch ? fencedMatch[1] : trimmed).trim();
+    const firstIndex = source.search(/[\[{]/);
+    if (firstIndex === -1) {
+      return source;
+    }
+    const sliced = source.slice(firstIndex);
+    const openChar = sliced[0];
+    const closeChar = openChar === "{" ? "}" : "]";
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+
+    for (let i = 0; i < sliced.length; i += 1) {
+      const ch = sliced[i];
+      if (inString) {
+        if (escape) {
+          escape = false;
+        } else if (ch === "\\") {
+          escape = true;
+        } else if (ch === "\"") {
+          inString = false;
+        }
+      } else {
+        if (ch === "\"") {
+          inString = true;
+        } else if (ch === openChar) {
+          depth += 1;
+        } else if (ch === closeChar) {
+          depth -= 1;
+          if (depth === 0) {
+            return sliced.slice(0, i + 1);
+          }
+        }
+      }
+    }
+
+    return sliced;
   };
 
   const parseRecommendations = (text) => {
-    const trimmed = text.trim();
-    try {
-      return JSON.parse(trimmed);
-    } catch (initialError) {
-      const arrayMatch = trimmed.match(/\[[\s\S]*\]/);
-      const objectMatch = trimmed.match(/\{[\s\S]*\}/);
-      const candidate = arrayMatch ? arrayMatch[0] : objectMatch ? objectMatch[0] : null;
-      if (!candidate) {
-        throw initialError;
-      }
-      return JSON.parse(candidate);
-    }
+    const candidate = extractJsonBlock(text);
+    return JSON.parse(candidate);
   };
 
   const handleSubmit = async (event) => {
@@ -94,33 +127,38 @@ export default function App() {
 
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({}));
-        throw new Error(errorBody?.error || `Gemini API error: ${response.status}`);
+        throw new Error(errorBody?.error || `Claude API error: ${response.status}`);
       }
 
       const data = await response.json();
       const content = data?.text || "";
       const parsed = parseRecommendations(content);
 
-      if (!Array.isArray(parsed)) {
-        throw new Error("Gemini response was not a JSON array.");
+      const palette = Array.isArray(parsed) ? parsed : parsed?.palette;
+      const designs = Array.isArray(parsed?.designs) ? parsed.designs : [];
+
+      if (!Array.isArray(palette)) {
+        throw new Error("Claude response was not a JSON array.");
       }
 
-      const cleaned = parsed
+      const cleaned = palette
         .filter((item) => item && item.name && item.hex)
         .map((item) => ({
           name: item.name,
           hex: item.hex,
           vibe: item.vibe || "",
           occasion: item.occasion || "",
+          design: item.design || "",
         }))
-        .slice(0, 6);
+        .slice(0, 3);
 
       if (!cleaned.length) {
-        throw new Error("Gemini response did not include usable colors.");
+        throw new Error("Claude response did not include usable colors.");
       }
 
       setRecommendations(cleaned);
-      setSource("Personalized by Claude based on your inputs.");
+      setDesignIdeas(designs.slice(0, 5));
+      setSource("Personalized based on your inputs.");
     } catch (err) {
       console.error(err);
       setError(err.message || "Something went wrong.");
@@ -257,6 +295,11 @@ export default function App() {
                           </button>
                         </div>
                         <p className="text-sm text-cacao/70">{rec.vibe}</p>
+                        {rec.design ? (
+                          <p className="text-sm text-cacao/80">
+                            <span className="font-semibold text-cacao">Design:</span> {rec.design}
+                          </p>
+                        ) : null}
                         <p className="text-xs uppercase tracking-[0.2em] text-cacao/50">
                           Best for: {rec.occasion}
                         </p>
@@ -264,6 +307,30 @@ export default function App() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div className="rounded-3xl bg-white/80 p-6 shadow-glow backdrop-blur">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display text-2xl text-cacao">Design ideas</h2>
+                  <span className="text-xs uppercase tracking-[0.2em] text-berry">Pattern edit</span>
+                </div>
+                <p className="mt-2 text-sm text-cacao/70">
+                  {designIdeas.length
+                    ? "Try one of these mini nail art moments with the palette."
+                    : "Generate a palette to unlock custom design ideas."}
+                </p>
+                {designIdeas.length ? (
+                  <ul className="mt-4 grid gap-3">
+                    {designIdeas.map((idea, index) => (
+                      <li
+                        key={`${idea}-${index}`}
+                        className="rounded-2xl border border-blush/60 bg-petal/60 px-4 py-3 text-sm text-cacao/80"
+                      >
+                        {idea}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
 
               <div className="rounded-3xl border border-blush/70 bg-white/70 p-6 text-sm text-cacao/70 shadow-glow">
