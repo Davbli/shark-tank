@@ -1,16 +1,11 @@
-import express from "express";
-import dotenv from "dotenv";
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed." });
+  }
 
-dotenv.config();
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const model = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
 
-const app = express();
-const port = process.env.PORT || 8787;
-const apiKey = process.env.ANTHROPIC_API_KEY;
-const model = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
-
-app.use(express.json({ limit: "1mb" }));
-
-app.post("/api/generate", async (req, res) => {
   if (!apiKey) {
     return res.status(500).json({ error: "Missing ANTHROPIC_API_KEY in server env." });
   }
@@ -49,8 +44,4 @@ app.post("/api/generate", async (req, res) => {
     console.error(error);
     return res.status(500).json({ error: "Unexpected server error." });
   }
-});
-
-app.listen(port, () => {
-  console.log(`Anthropic proxy running on http://localhost:${port}`);
-});
+}

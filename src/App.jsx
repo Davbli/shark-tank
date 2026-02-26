@@ -82,7 +82,7 @@ export default function App() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/gemini", {
+      const response = await fetch("/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -120,7 +120,7 @@ export default function App() {
       }
 
       setRecommendations(cleaned);
-      setSource("Personalized by Gemini based on your inputs.");
+      setSource("Personalized by Claude based on your inputs.");
     } catch (err) {
       console.error(err);
       setError(err.message || "Something went wrong.");
@@ -142,7 +142,7 @@ export default function App() {
                 Your personalized nail polish palette, styled like a beauty editor.
               </h1>
               <p className="max-w-xl text-base leading-relaxed text-cacao/80">
-                Tell us the mood, moment, and what you are wearing. Gemini will curate a mix of
+                Tell us the mood, moment, and what you are wearing. Claude will curate a mix of
                 neutrals and statements with matching hex codes so you can shop or DIY.
               </p>
               <div className="rounded-3xl bg-white/80 p-6 shadow-glow backdrop-blur">
