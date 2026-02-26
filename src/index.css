@@ -11,13 +11,6 @@ body {
   background: #fff9fb;
 }
 
-.hero-gradient {
-  min-height: 100vh;
-  background: radial-gradient(circle at top, rgba(243, 182, 198, 0.45), transparent 55%),
-    radial-gradient(circle at 20% 20%, rgba(247, 220, 229, 0.6), transparent 55%),
-    linear-gradient(120deg, #fff9fb 0%, #f7dce5 55%, #fbeff3 100%);
-}
-
 button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
@@ -25,10 +18,4 @@ button:disabled {
 
 * {
   box-sizing: border-box;
-}
-
-@media (max-width: 640px) {
-  .hero-gradient {
-    background: linear-gradient(160deg, #fff9fb 0%, #f7dce5 60%, #fbeff3 100%);
-  }
 }

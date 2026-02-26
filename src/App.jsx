@@ -169,7 +169,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-pearl">
-      <div className="hero-gradient">
+      <div>
         <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12 lg:flex-row lg:gap-12">
           <section className="flex-1">
             <div className="space-y-6">
@@ -180,7 +180,7 @@ export default function App() {
                 Your personalized nail polish palette, styled like a beauty editor.
               </h1>
               <p className="max-w-xl text-base leading-relaxed text-cacao/80">
-                Tell us the mood, moment, and what you are wearing. Claude will curate a mix of
+                Tell us the mood, moment, and what you are wearing. Polish Muse will curate a mix of
                 neutrals and statements with matching hex codes so you can shop or DIY.
               </p>
               <div className="rounded-3xl bg-white/80 p-6 shadow-glow backdrop-blur">
